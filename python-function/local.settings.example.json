@@ -1,0 +1,8 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "BOOKS_API_URL": "https://YOUR-PHP-APP-DEFAULT-DOMAIN/api/books.php"
+  }
+}

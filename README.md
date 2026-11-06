@@ -116,3 +116,103 @@ Run `php tests/shop_helpers_test.php`. The CI pipeline checks PHP syntax and hel
 - [Neuromancer ISBN](https://www.brownsbfs.co.uk/Product/Gibson-William/Neuromancer/9780441569595)
 - [The Hobbit edition details](https://www.tolkienbooks.us/hob/us/tpb/the-hobbit-2012)
 - [The Name of the Wind publisher details](https://astrapublishinghouse.com/product/the-name-of-the-wind-9780756404741/)
+
+
+## Azure Functions book recommendations
+
+A separate **Python Azure Function** is now included in [python-function/](python-function/).
+It has both the workshop's original `/api/simplehello` route and
+the new **`GET /api/recommendations?genre=Fantasy`** route. The Python
+function makes an outbound HTTPS call to this PHP app's public
+`/api/books.php` JSON endpoint; it returns up to three currently in-stock
+books ordered by **simulated stock**. This is transparent rule-based
+selection, not AI/ML or customer-specific personalisation.
+
+### Cloud request flow
+
+```text
+Visitor to Starbound Books homepage
+    │
+    ├── GET /api/recommendations-proxy.php?genre=Fantasy (PHP App Service)
+    │      │
+    │      └── GET /api/recommendations?genre=Fantasy (Python Azure Function)
+    │              │
+    │              └── GET /api/books.php?genre=Fantasy (PHP App Service)
+    │                      │
+    │                      └── SELECT active books FROM Azure SQL
+    │
+    └── Recommended book cards (async; cart/checkout unaffected)
+```
+
+The browser only requests its own PHP domain, so no Azure Functions CORS
+setting is needed. The proxy reads the **`RECOMMENDATIONS_FUNCTION_URL`**
+app setting and accepts only HTTPS Azure Functions default-hostname URLs,
+not user-provided arbitrary URLs. The Python Function reads
+**`BOOKS_API_URL`** in its own Azure Function App environment settings.
+
+### Configure and deploy, in this order
+
+1. **Find the actual Azure-hosted URLs**: Azure Portal → App Services →
+   `firstwebpage-cs` → Overview → **Default domain**, and Function Apps →
+   `python-function-cs` → Overview → **Default domain**.
+   Some domains include unique suffixes; **never guess** URLs.
+2. Confirm the PHP public endpoint works by visiting
+   `https://<PHP-DEFAULT-DOMAIN>/api/books.php?genre=Fantasy`. It
+   should return JSON with a `books` array.
+3. In the **Function App `python-function-cs`** → Settings →
+   Environment variables, create:
+   **`BOOKS_API_URL=https://<PHP-DEFAULT-DOMAIN>/api/books.php`**
+   (no `?genre` in this setting). Save / restart.
+4. Deploy the Python project in `python-function/` to **`python-function-cs`**.
+   From that folder in a VS Code terminal, after Azure Functions Core Tools
+   is installed and you have signed into Azure, run:
+   ```powershell
+   func azure functionapp publish python-function-cs
+   ```
+   This requests a **remote Python dependency build**, recommended on
+   Windows when the Function App runs Linux. The deployed files must include
+   `function_app.py`, `recommendations_core.py`, `requirements.txt`, and
+   root-level `host.json`. Deploying the `python-function/` folder itself
+   as the ZIP root is incorrect. See
+   [python-function/README.md](python-function/README.md) for the exact
+   commands, manual ZIP alternative, and local testing.
+5. Check the Function App → Functions: **SimpleHello** and
+   **BookRecommendations** should both appear. Test in a browser:
+   `https://<FUNCTION-DEFAULT-DOMAIN>/api/recommendations?genre=Fantasy`
+   The JSON should contain `recommendations`, `count`, and `source`.
+6. In the **PHP App Service `firstwebpage-cs`** → Settings →
+   Environment variables, create:
+   **`RECOMMENDATIONS_FUNCTION_URL=https://<FUNCTION-DEFAULT-DOMAIN>/api/recommendations`**
+   (no genre query or key; this classroom endpoint is anonymous and
+   returns only public book data). Save / restart.
+7. Refresh the bookstore homepage, choose **Fantasy** or
+   **Science fiction** under **Recommended for you**, and verify the book
+   suggestions appear. You can inspect the Network tab in browser developer
+   tools and the Function App's monitoring logs for the request flow.
+
+### Troubleshooting
+
+- **"Recommendations are not configured"**: confirm the exact
+  `RECOMMENDATIONS_FUNCTION_URL` app setting is saved on the **PHP App
+  Service**, not the Python Function App.
+- **HTTP 503 from Function**: set `BOOKS_API_URL` on the **Function App**
+  and verify the public PHP `/api/books.php` endpoint returns JSON.
+- **HTTP 502**: the Python Function cannot reach PHP, or PHP returned an
+  error. Check Function App Log Stream and the PHP /api/books.php response.
+- **404**: check each app's **Default domain** and the path
+  `/api/recommendations`; make sure the Python project was deployed with
+  `host.json` at ZIP root.
+- **Homepage still works but recommendations fail**: intentional graceful
+  degradation. Basket, checkout, catalogue, and SQL are independent.
+- **No images**: Open Library may not have a cover for every ISBN.
+- **No CORS setup required**: the browser talks only to PHP; PHP contacts
+  the Python function on the server.
+- No SQL schema changes needed for this integration.
+
+### Tests
+
+GitHub Actions verifies Python syntax, Python recommendation unit tests,
+the JavaScript syntax, PHP lint, and existing PHP helper tests on PRs.
+**GitHub Actions only deploys the PHP website**; publishing the Python
+Function App is a **separate manual deployment**. Tests mock the catalogue
+HTTP response and do not prove Azure networking or live function availability.

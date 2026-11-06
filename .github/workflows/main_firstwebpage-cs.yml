@@ -25,6 +25,16 @@ jobs:
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run shop helper tests
         run: php tests/shop_helpers_test.php
+      - name: Setup Python for Azure Functions tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check Python Functions syntax
+        run: python -m compileall -q python-function
+      - name: Test serverless recommendation logic (no Azure access required)
+        run: python -m unittest discover -s python-function/tests -v
+      - name: Check recommendation browser script syntax
+        run: node --check assets/recommendations.js
       - name: Check if composer.json exists
         id: check_files
         uses: andstor/file-existence-action@v1
@@ -37,7 +47,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: php-app
-          path: .
+          path: |
+            .
+            !python-function/**
+            !python-function
 
   deploy:
     if: github.event_name != 'pull_request'
