@@ -52,6 +52,19 @@ jobs:
             !python-function/**
             !python-function
 
+      # This ZIP is downloadable from the successful PR run's Artifacts section.
+      # The root contains host.json, never an enclosing python-function folder.
+      - name: Package Azure Function project for manual deployment
+        run: |
+          cd python-function
+          zip -q ../python-function-deployment.zip function_app.py recommendations_core.py requirements.txt host.json
+          unzip -l ../python-function-deployment.zip
+      - name: Upload Azure Function deployment ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-function-deployment
+          path: python-function-deployment.zip
+
   deploy:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
