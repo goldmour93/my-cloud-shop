@@ -160,6 +160,7 @@ function page_header(string $title): void
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$safeTitle · Starbound Books</title>
 <link rel="stylesheet" href="assets/shop.css">
+<link rel="stylesheet" href="assets/recommendations.css">
 </head>
 <body>
 <header class="site-header"><div class="wrap topbar">
