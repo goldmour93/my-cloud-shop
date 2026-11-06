@@ -1,56 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyShop - Welcome</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        .header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 24px 0;
-            text-align: center;
-        }
-        .header h1 { margin: 0 0 10px; font-size: 2.5em; }
-        .header p { margin: 0; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .welcome-text {
-            text-align: center;
-            margin: 70px auto;
-            font-size: 1.2em;
-        }
-        .signup-link {
-            display: inline-block;
-            background-color: #007bff;
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 18px;
-            margin-top: 20px;
-        }
-        .signup-link:hover { background-color: #0056b3; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="container">
-            <h1>MyShop</h1>
-            <p>Your one-stop destination for amazing products</p>
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/includes/shop.php';
+page_header('Your next great escape');
+?>
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">SCIENCE FICTION & FANTASY · INDEPENDENT DEMO BOOKSHOP</p>
+        <h2>Other worlds.<br>One bookshop.</h2>
+        <p>From distant galaxies to enchanted kingdoms, discover your next favourite story.</p>
+        <div class="hero-actions">
+            <a class="btn" href="catalog.php">Explore all books</a>
+            <a class="btn outline" href="catalog.php?genre=Science+Fiction">Shop sci-fi</a>
+            <a class="btn outline" href="catalog.php?genre=Fantasy">Shop fantasy</a>
         </div>
     </div>
-    <main class="container">
-        <div class="welcome-text">
-            <h2>Welcome to MyShop</h2>
-            <p>Join our community today to access exclusive deals and features!</p>
-            <a href="register.php" class="signup-link">Create Your Account</a>
-        </div>
-    </main>
-</body>
-</html>
+    <div class="hero-art" aria-hidden="true">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="hero-book"><span>STARBOUND</span><strong>THE<br>STORIES<br>AWAIT</strong><small>✦ ✦ ✦</small></div>
+    </div>
+</section>
+<section class="section-heading"><div><p class="eyebrow">BROWSE BY UNIVERSE</p><h2>Find your genre</h2></div></section>
+<div class="genre-grid">
+    <a class="genre-tile space" href="catalog.php?genre=Science+Fiction">
+        <span class="genre-symbol" aria-hidden="true">✧</span>
+        <span class="genre-text"><strong>Science fiction</strong><small>Beyond the stars and into tomorrow</small></span>
+        <span aria-hidden="true">↗</span>
+    </a>
+    <a class="genre-tile magic" href="catalog.php?genre=Fantasy">
+        <span class="genre-symbol" aria-hidden="true">✦</span>
+        <span class="genre-text"><strong>Fantasy</strong><small>Myths, magic and forgotten realms</small></span>
+        <span aria-hidden="true">↗</span>
+    </a>
+</div>
+<section class="info-strip">
+    <div><strong>Curated worlds</strong><span>Browse a focused collection of speculative fiction.</span></div>
+    <div><strong>Stock you can see</strong><span>Availability comes from your Azure SQL catalogue.</span></div>
+    <div><strong>Practice checkout</strong><span>Place demo orders. No real payment is collected.</span></div>
+</section>
+<?php page_footer(); ?>

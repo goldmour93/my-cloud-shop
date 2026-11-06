@@ -15,7 +15,7 @@ function registrationError(string $message): void
 
 function logSqlErrors(string $context): void
 {
-    error_log('MyShop registration: ' . $context);
+    error_log('Starbound Books registration: ' . $context);
     if (!function_exists('sqlsrv_errors')) {
         return;
     }
@@ -25,7 +25,7 @@ function logSqlErrors(string $context): void
         foreach ($errors as $error) {
             // Log codes, not credentials or database details in browser responses.
             error_log(sprintf(
-                'MyShop SQL error: state=%s code=%s',
+                'Starbound Books SQL error: state=%s code=%s',
                 (string) ($error['SQLSTATE'] ?? 'unknown'),
                 (string) ($error['code'] ?? 'unknown')
             ));
@@ -48,12 +48,12 @@ $username = getenv('DB_USER');
 $dbPassword = getenv('DB_PASSWORD');
 
 if (!$username || !$dbPassword) {
-    error_log('MyShop registration: DB_USER or DB_PASSWORD is missing from App Service settings.');
+    error_log('Starbound Books registration: DB_USER or DB_PASSWORD is missing from App Service settings.');
     registrationError('Registration is not configured yet. Please contact the site administrator.');
 }
 
 if (!function_exists('sqlsrv_connect')) {
-    error_log('MyShop registration: the PHP sqlsrv extension is not available.');
+    error_log('Starbound Books registration: the PHP sqlsrv extension is not available.');
     registrationError('Registration is temporarily unavailable. Please try again later.');
 }
 
