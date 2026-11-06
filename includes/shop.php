@@ -38,6 +38,18 @@ function decimal(int $cents): string
     return number_format($cents / 100, 2, '.', '');
 }
 
+/**
+ * Whitelist Open Library book-cover thumbnail URLs.
+ * We never use arbitrary external URLs from SQL as an image source.
+ */
+function open_library_cover(?string $value): string
+{
+    $value = trim((string) $value);
+    return preg_match('~\Ahttps://covers\.openlibrary\.org/b/isbn/[0-9]{13}-[SML]\.jpg(?:\?default=false)?\z~D', $value)
+        ? $value
+        : '';
+}
+
 function db(): mixed
 {
     static $connection = null;
@@ -163,7 +175,7 @@ HTML;
 
 function page_footer(): void
 {
-    echo '</main><footer class="site-footer"><div class="wrap">Starbound Books · A CloudCart learning project · Demo inventory and prices · No real payments.</div></footer></body></html>';
+    echo '</main><footer class="site-footer"><div class="wrap">Starbound Books · CloudCart coursework demo · Prices/stock simulated · Covers via Open Library · No real payments.</div></footer></body></html>';
 }
 
 function unavailable(Throwable $error): never

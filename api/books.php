@@ -28,7 +28,7 @@ try {
         $parameters[] = $genre;
     }
     $records = rows(sql(
-        'SELECT TOP (100) id, sku, name, author, genre, book_format, description, price, stock
+        'SELECT TOP (100) id, sku, name, author, genre, book_format, description, price, stock, cover_url
          FROM dbo.products ' . $where . ' ORDER BY name ASC',
         $parameters
     ));
@@ -40,6 +40,7 @@ try {
         'genre' => (string) $row['genre'],
         'format' => (string) $row['book_format'],
         'description' => (string) $row['description'],
+        'cover_url' => open_library_cover($row['cover_url'] ?? null),
         'price_gbp' => decimal(price_cents((string) $row['price']) ?? 0),
         'stock' => (int) $row['stock'],
     ], $records);
