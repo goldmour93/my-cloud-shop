@@ -34,7 +34,7 @@ if (!is_array($parts)
     || ($parts['scheme'] ?? '') !== 'https'
     || !str_ends_with($hostname, '.azurewebsites.net')
     || ($parts['path'] ?? '') !== '/api/recommendations'
-    || isset($parts['user'], $parts['pass'])
+    || isset($parts['user']) || isset($parts['pass'])
     || isset($parts['fragment'])
     || isset($parts['port'])
     || isset($parts['query'])) {
@@ -103,12 +103,12 @@ foreach (array_slice($decoded['recommendations'], 0, 3) as $entry) {
         continue;
     }
     $books[] = [
-        'title' => mb_substr($entry['title'], 0, 120),
-        'author' => mb_substr($entry['author'], 0, 120),
-        'sku' => mb_substr($entry['sku'], 0, 64),
+        'title' => substr($entry['title'], 0, 120),
+        'author' => substr($entry['author'], 0, 120),
+        'sku' => substr($entry['sku'], 0, 64),
         'genre' => $genre,
         'price_gbp' => (string) ($entry['price_gbp'] ?? ''),
-        'cover_url' => open_library_cover($entry['cover_url'] ?? null),
+        'cover_url' => open_library_cover(is_string($entry['cover_url'] ?? null) ? $entry['cover_url'] : null),
     ];
 }
 recommendation_response(200, [
