@@ -86,8 +86,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     redirect_to('admin.php');
 }
 
-page_header('Product management');
 if (!$authenticated):
+    page_header('Product management');
 ?>
 <div class="panel form-width">
     <h2>Administrator login</h2>
@@ -112,6 +112,7 @@ try {
 } catch (Throwable $e) {
     unavailable($e);
 }
+page_header('Product management');
 ?>
 <form method="post" class="row">
     <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">

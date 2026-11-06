@@ -19,12 +19,15 @@ try {
 } catch (Throwable $e) {
     unavailable($e);
 }
+if ($requestedToken !== '' && (!$showDetail || empty($order))) {
+    http_response_code(404);
+}
 page_header('My orders');
 ?>
 <p class="muted">Orders placed in this browser session are listed here. For this demonstration, orders are not linked to registered accounts.</p>
 <?php if ($requestedToken !== ''): ?>
 <?php if (!$showDetail || empty($order)): ?>
-    <?php http_response_code(404); ?><p>Order not found in this browser session.</p>
+    <p>Order not found in this browser session.</p>
 <?php else: ?>
 <section class="panel">
     <h2>Order #<?= (int) $order['id'] ?></h2>
