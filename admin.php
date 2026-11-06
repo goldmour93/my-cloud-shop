@@ -51,6 +51,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $genre = (string) ($_POST['genre'] ?? '');
     $bookFormat = (string) ($_POST['book_format'] ?? '');
     $description = trim((string) ($_POST['description'] ?? ''));
+    $requestedCover = trim((string) ($_POST['cover_url'] ?? ''));
+    if ($requestedCover === '' && preg_match('/^[0-9]{13}$/D', $sku)) {
+        $requestedCover = 'https://covers.openlibrary.org/b/isbn/' . $sku . '-M.jpg?default=false';
+    }
+    $coverUrl = open_library_cover($requestedCover);
+    if ($requestedCover !== '' && $coverUrl === '') {
+        message('Use an Open Library ISBN cover URL (or leave the cover field empty).');
+        redirect_to('admin.php');
+    }
     $price = price_cents((string) ($_POST['price'] ?? ''));
     $stock = filter_var($_POST['stock'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
     $active = isset($_POST['is_active']) ? 1 : 0;
@@ -67,18 +76,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
     try {
         if ($productId === 'new') {
-            sql('INSERT INTO dbo.products (sku, name, author, genre, book_format, description, price, stock, is_active)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                 [$sku, $name, $author, $genre, $bookFormat, $description, decimal($price), $stock, $active]);
+            sql('INSERT INTO dbo.products (sku, name, author, genre, book_format, description, price, stock, cover_url, is_active)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 [$sku, $name, $author, $genre, $bookFormat, $description, decimal($price), $stock, $coverUrl, $active]);
         } else {
             $id = filter_var($productId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
             if ($id === false) {
                 throw new DomainException('Invalid book identifier.');
             }
             $statement = sql('UPDATE dbo.products SET sku = ?, name = ?, author = ?, genre = ?, book_format = ?,
-                                  description = ?, price = ?, stock = ?, is_active = ?, updated_at = SYSUTCDATETIME()
+                                  description = ?, price = ?, stock = ?, cover_url = ?, is_active = ?, updated_at = SYSUTCDATETIME()
                               WHERE id = ?',
-                              [$sku, $name, $author, $genre, $bookFormat, $description, decimal($price), $stock, $active, $id]);
+                              [$sku, $name, $author, $genre, $bookFormat, $description, decimal($price), $stock, $coverUrl, $active, $id]);
             $affected = sqlsrv_rows_affected($statement);
             sqlsrv_free_stmt($statement);
             if ($affected !== 1) {
@@ -117,7 +126,7 @@ if (!$authenticated):
     exit;
 endif;
 try {
-    $products = rows(sql('SELECT TOP (200) id, sku, name, author, genre, book_format, description, price, stock, is_active FROM dbo.products ORDER BY id DESC'));
+    $products = rows(sql('SELECT TOP (200) id, sku, name, author, genre, book_format, description, price, stock, cover_url, is_active FROM dbo.products ORDER BY id DESC'));
 } catch (Throwable $e) {
     unavailable($e);
 }
@@ -134,7 +143,7 @@ page_header('Book inventory');
     <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
     <input type="hidden" name="action" value="save_product">
     <input type="hidden" name="product_id" value="new">
-    <label for="new-sku">SKU (unique)</label><input id="new-sku" name="sku" required maxlength="64" placeholder="SF-BOOK-001">
+    <label for="new-sku">SKU (unique)</label><input id="new-sku" name="sku" required maxlength="64" placeholder="9781250318541">
     <label for="new-name">Book title</label><input id="new-name" name="name" required maxlength="120">
     <label for="new-author">Author</label><input id="new-author" name="author" required maxlength="120">
     <div class="form-grid"><div><label for="new-genre">Genre</label><select id="new-genre" name="genre" required>
@@ -144,6 +153,8 @@ page_header('Book inventory');
       <option value="Paperback">Paperback</option><option value="Hardback">Hardback</option>
     </select></div></div>
     <label for="new-description">Book synopsis</label><textarea id="new-description" name="description" maxlength="1000"></textarea>
+    <label for="new-cover">Open Library cover URL (optional; inferred automatically if SKU is an ISBN-13)</label>
+    <input id="new-cover" name="cover_url" type="url" maxlength="500" placeholder="https://covers.openlibrary.org/b/isbn/978...-M.jpg?default=false">
     <div class="form-grid">
         <div><label for="new-price">Price (GBP)</label><input id="new-price" name="price" type="text" inputmode="decimal" required placeholder="19.99"></div>
         <div><label for="new-stock">Stock quantity</label><input id="new-stock" name="stock" type="number" min="0" max="1000000" value="0" required></div>
@@ -178,6 +189,9 @@ page_header('Book inventory');
         </select></div></div>
         <label for="description-<?= $id ?>">Book synopsis</label>
         <textarea id="description-<?= $id ?>" name="description" maxlength="1000"><?= h($product['description']) ?></textarea>
+        <label for="cover-<?= $id ?>">Open Library cover URL (optional)</label>
+        <input id="cover-<?= $id ?>" type="url" name="cover_url" maxlength="500"
+               value="<?= h($product['cover_url'] ?? '') ?>">
         <div class="form-grid">
             <div><label for="price-<?= $id ?>">Price (GBP)</label><input id="price-<?= $id ?>" name="price" inputmode="decimal" required value="<?= h(decimal(price_cents((string) $product['price']) ?? 0)) ?>"></div>
             <div><label for="stock-<?= $id ?>">Stock</label><input id="stock-<?= $id ?>" type="number" name="stock" min="0" max="1000000" required value="<?= (int) $product['stock'] ?>"></div>

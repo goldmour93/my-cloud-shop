@@ -88,3 +88,8 @@ table{border-collapse:collapse;width:100%;background:#121d37}th,td{padding:.8rem
 .product-admin{margin-bottom:.8rem}.product-admin summary{cursor:pointer;font-weight:700;color:#f0d1a0}.product-admin[open] summary{margin-bottom:1rem}
 @media(max-width:850px){.hero{grid-template-columns:1fr;min-height:0;padding:2.4rem}.hero-art{min-height:280px}.genre-grid,.info-strip{grid-template-columns:1fr}.site-header nav{gap:.7rem}}
 @media(max-width:530px){.topbar{align-items:flex-start;flex-direction:column;padding:1rem 0}.hero h2{font-size:2.7rem}.hero-art{display:none}main{padding:1.4rem 0 3rem}.genre-tile{padding:1.3rem}.filters{display:block}.filters>div{margin-bottom:.8rem}.filters>button{width:100%}th,td{padding:.48rem;font-size:.85rem}}
+
+/* Publisher book-cover thumbnails served by Open Library (with a CSS fallback). */
+.book-cover-image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#09142a;z-index:2}
+.edition-link{font-size:.76rem;color:#afc9f5;display:inline-block;margin:-.3rem 0 .7rem}
+.edition-link:hover{color:#e8d2a8}

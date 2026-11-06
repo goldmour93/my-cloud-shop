@@ -7,7 +7,7 @@ page_header('Your next great escape');
     <div class="hero-copy">
         <p class="eyebrow">SCIENCE FICTION & FANTASY · INDEPENDENT DEMO BOOKSHOP</p>
         <h2>Other worlds.<br>One bookshop.</h2>
-        <p>From distant galaxies to enchanted kingdoms, discover your next favourite story.</p>
+        <p>Discover celebrated science-fiction and fantasy novels from authors including Brandon Sanderson, Frank Herbert and Andy Weir.</p>
         <div class="hero-actions">
             <a class="btn" href="catalog.php">Explore all books</a>
             <a class="btn outline" href="catalog.php?genre=Science+Fiction">Shop sci-fi</a>
@@ -33,7 +33,7 @@ page_header('Your next great escape');
     </a>
 </div>
 <section class="info-strip">
-    <div><strong>Curated worlds</strong><span>Browse a focused collection of speculative fiction.</span></div>
+    <div><strong>Curated worlds</strong><span>Discover real novels with demo prices and simulated stock.</span></div>
     <div><strong>Stock you can see</strong><span>Availability comes from your Azure SQL catalogue.</span></div>
     <div><strong>Practice checkout</strong><span>Place demo orders. No real payment is collected.</span></div>
 </section>

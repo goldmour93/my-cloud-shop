@@ -27,7 +27,7 @@ try {
         array_push($parameters, '%' . $search . '%', '%' . $search . '%', '%' . $search . '%');
     }
     $books = rows(sql(
-        'SELECT TOP (100) p.id, p.sku, p.name, p.author, p.genre, p.book_format, p.description, p.price, p.stock
+        'SELECT TOP (100) p.id, p.sku, p.name, p.author, p.genre, p.book_format, p.description, p.price, p.stock, p.cover_url
          FROM dbo.products AS p WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $orderBy,
         $parameters
     ));
@@ -36,7 +36,7 @@ try {
 }
 page_header('Explore the shelves');
 ?>
-<p class="intro">Science fiction and fantasy books for every kind of reader. Every title and price below is fictional demo inventory.</p>
+<p class="intro">Famous science-fiction and fantasy books by authors including Brandon Sanderson, Frank Herbert and Andy Weir. Titles are real; prices, availability and checkout are simulated for coursework.</p>
 <form method="get" action="catalog.php" class="filters">
     <div><label for="q">Search titles or authors</label><input id="q" name="q" value="<?= h($search) ?>" placeholder="Search the shelves..." maxlength="100"></div>
     <div><label for="genre">Genre</label><select id="genre" name="genre">
@@ -60,9 +60,15 @@ page_header('Explore the shelves');
 <?php foreach ($books as $book):
     $id = (int) $book['id'];
     $isFantasy = $book['genre'] === 'Fantasy';
+    $cover = open_library_cover($book['cover_url'] ?? null);
 ?>
 <article class="book-card">
     <div class="book-cover <?= $isFantasy ? 'fantasy' : 'scifi' ?>">
+        <?php if ($cover !== ''): ?>
+          <img class="book-cover-image" src="<?= h($cover) ?>"
+               alt="Cover of <?= h($book['name']) ?> by <?= h($book['author']) ?>"
+               loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">
+        <?php endif; ?>
         <div class="cover-top"><span><?= h($book['genre']) ?></span><span aria-hidden="true">✦</span></div>
         <div class="cover-ornament" aria-hidden="true"><?= $isFantasy ? '❖' : '✧' ?></div>
         <div class="cover-bottom"><strong><?= h($book['name']) ?></strong><small><?= h($book['author']) ?></small></div>
@@ -71,6 +77,9 @@ page_header('Explore the shelves');
         <p class="book-format"><?= h($book['book_format']) ?> · <?= h($book['genre']) ?></p>
         <h2><?= h($book['name']) ?></h2>
         <p class="author">by <?= h($book['author']) ?></p>
+        <?php if (preg_match('/^[0-9]{13}$/D', (string) $book['sku'])): ?>
+          <a class="edition-link" href="https://openlibrary.org/isbn/<?= h($book['sku']) ?>" target="_blank" rel="noopener noreferrer">View edition on Open Library</a>
+        <?php endif; ?>
         <p class="description"><?= h($book['description']) ?></p>
         <div class="price-line"><strong><?= h(pounds(price_cents((string) $book['price']) ?? 0)) ?></strong>
            <span class="<?= (int) $book['stock'] > 0 ? 'available' : 'sold-out' ?>"><?= (int) $book['stock'] > 0 ? (int) $book['stock'] . ' available' : 'Sold out' ?></span></div>

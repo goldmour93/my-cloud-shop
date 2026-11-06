@@ -20,4 +20,7 @@ assert_same('&lt;script&gt;', h('<script>'), 'HTML escaping');
 assert_same(64, strlen(cart_key()), 'hashed session cart key');
 assert_same(64, strlen(csrf_token()), 'CSRF token length');
 assert_same(csrf_token(), csrf_token(), 'CSRF stable within request');
+assert_same('https://covers.openlibrary.org/b/isbn/9781250318541-M.jpg?default=false', open_library_cover('https://covers.openlibrary.org/b/isbn/9781250318541-M.jpg?default=false'), 'valid Open Library cover');
+assert_same('', open_library_cover('javascript:alert(1)'), 'reject JavaScript cover URL');
+assert_same('', open_library_cover('https://example.com/image.jpg'), 'reject untrusted cover host');
 echo "Starbound Books helper tests: OK\n";
