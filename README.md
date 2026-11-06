@@ -1,47 +1,75 @@
-# MyShop — Azure PHP registration workshop
+# MyShop / CloudCart — Azure PHP demo shop
 
-This repository deploys a PHP registration website to the Azure App Service **firstwebpage-cs**. Its Azure SQL database is **callumitaly** on **callum-sql-italy**.
+A PHP/Azure SQL e-commerce demonstration deployed to Azure App Service **firstwebpage-cs**, with Azure SQL database **callumitaly** on **callum-sql-italy**.
 
-## Required Azure App Service settings
+## Features in this pull request
 
-In Azure Portal, open **App Services → firstwebpage-cs → Settings → Environment variables (or Configuration) → App settings**, add the following settings and save/restart the app:
+- Searchable public product catalogue with current prices and stock.
+- Session-based cart stored in Azure SQL, quantity updates, removal, and stock-aware validation.
+- Demonstration checkout (full name, email, shipping address) that stores orders and order-line price snapshots.
+- Checkout in **one SQL transaction**: conditional stock updates prevent overselling; any failure rolls back the stock and order changes.
+- Admin-only product creation, editing, stock updates and hiding products using a separate hashed administrator password.
+- Session-scoped order history and order details.
+- Existing registration pages are preserved. **Registration is not yet login/authentication**, and is not linked to cart/orders.
+- **No payments are processed**; orders are marked payment_status = not_collected. Payment simulation and delivery tracking are future features.
 
-| Name | Value |
-| --- | --- |
-| `DB_USER` | SQL administrator/login username for `callum-sql-italy` |
-| `DB_PASSWORD` | Password for that SQL login (do **not** commit it to GitHub) |
-| `DB_SERVER` | `tcp:callum-sql-italy.database.windows.net,1433` *(optional; already the code's default)* |
-| `DB_NAME` | `callumitaly` *(optional; already the code's default)* |
+## Azure setup
 
-The PHP `sqlsrv` extension and its Microsoft ODBC driver must be available in the App Service runtime. If registration returns "temporarily unavailable", use **App Service → SSH** to run `php -m | grep -i sqlsrv`. If `sqlsrv` does not appear, the SQL Server PHP driver must be installed/enabled in the hosting environment. See [Microsoft SQLSRV driver troubleshooting](https://learn.microsoft.com/en-us/sql/connect/php/troubleshooting-php-sql-driver).
+1. Review and merge the PR to deploy to Azure App Service. GitHub Actions in .github/workflows/main_firstwebpage-cs.yml handles the deployment after merging.
+2. In **Azure App Service → firstwebpage-cs → Settings → Environment variables (App settings)** configure:
 
-In Azure SQL server **callum-sql-italy → Networking**, ensure your Web App can reach the database, using an appropriately scoped firewall/networking configuration.
+   | Setting | Value |
+   | --- | --- |
+   | DB_USER | SQL login username for callum-sql-italy |
+   | DB_PASSWORD | SQL login password (never commit this) |
+   | DB_SERVER | Optional; defaults to tcp:callum-sql-italy.database.windows.net,1433 |
+   | DB_NAME | Optional; defaults to callumitaly |
+   | ADMIN_PASSWORD_HASH | Required for admin access. Result of PHP password_hash (see below) |
 
-In the **callumitaly → Query editor**, create the workshop table if it does not exist:
+3. Ensure App Service can reach Azure SQL with appropriately scoped firewall rules/network settings. The PHP **sqlsrv** extension and Microsoft ODBC driver are required. Check App Service SSH with: php -m | grep -i sqlsrv. The GitHub Actions runner does not verify these runtime drivers.
+4. In the **callumitaly Azure SQL Query editor**, run [db/schema.sql](db/schema.sql). It creates products, cart_items, orders and order_items when missing and adds four sample products. Re-running the script preserves existing products/orders.
+5. To enable product management, **generate a hash locally**, with a strong unique administrator password. Example PHP CLI command:
 
-```sql
-CREATE TABLE dbo.shopusers (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    name NVARCHAR(100) NOT NULL,
-    email NVARCHAR(100) NOT NULL,
-    password NVARCHAR(255) NOT NULL,
-    created_at DATETIME2 DEFAULT GETDATE()
-);
-```
+       php -r 'echo password_hash(readline("Admin password: "), PASSWORD_DEFAULT), PHP_EOL;'
 
-This SQL is for **initial setup only**; do not run it again if the table already exists. Passwords submitted through the form are hashed using `password_hash()`; the database stores the hash, not the raw registration password.
+   Paste **only the resulting hash** into Azure App Service environment variable ADMIN_PASSWORD_HASH and restart the app. Do not commit the password or hash; a hash is still a sensitive verifier.
+6. Visit https://firstwebpage-cs.azurewebsites.net/catalog.php for the catalogue and /admin.php for product management.
 
-## Test
+### Existing registration feature
 
-1. Open `https://firstwebpage-cs.azurewebsites.net/` (or the default domain shown in App Service → Overview).
-2. Click **Create Your Account**. You should see Name, Email, and Password fields.
-3. Submit a test registration. A successful database insert redirects to `success.php`.
-4. In the database's Query editor, verify with:
+The existing user-registration code uses dbo.shopusers. If it is missing, run once:
 
-   ```sql
-   SELECT id, name, email, created_at FROM dbo.shopusers ORDER BY id DESC;
-   ```
+    CREATE TABLE dbo.shopusers (id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(100) NOT NULL, email NVARCHAR(100) NOT NULL, password NVARCHAR(255) NOT NULL, created_at DATETIME2 DEFAULT GETDATE());
 
-## Security note
+Registration uses password_hash() and prepared SQL parameters but **does not implement login, MFA or OAuth**. Do not claim those features in the assessment.
 
-An earlier `processregister.php` committed a database password to the **public repository**. Removing the file from the current branch does **not** erase Git history. If that password is (or was) in use, **reset/rotate it immediately in Azure**, then use only the new password in App Service `DB_PASSWORD`. Consider repository history cleanup and secret-scanning guidance; do not post credentials in issues, commits, or screenshots.
+### Security warning
+
+An earlier processregister.php commit included a database password in this **public repository**. Removing the file did not erase Git history. **Rotate/revoke that password in Azure immediately** if it was used. Review Git history and secret-scanning guidance, and do not post secrets in screenshots.
+
+The new shop uses parameterized queries, encoded HTML, CSRF tokens on form changes, session-only access to order details, and a hashed admin password with a per-session login-attempt limit. It is a classroom demonstration, **not a production-ready e-commerce system**. Before real deployment, add full customer authentication, managed identity / Key Vault, stronger account-wide rate limiting, HTTPS enforcement, session lifecycle and privacy/retention policies, automated integration tests, logging/monitoring, and a real payment provider.
+
+## How to test
+
+1. Run db/schema.sql against the correct Azure SQL database and configure environment variables.
+2. In /admin.php, sign in and add a product (SKU must be unique). Update its stock and hide/unhide it.
+3. In /catalog.php, search for that product and add a quantity to the cart.
+4. In /cart.php, update the quantity, remove/add an item, and check the displayed subtotal.
+5. Check out through /checkout.php using **demo information only**. No payment occurs.
+6. View the saved order in /orders.php from the same browser. Confirm orders and order_items records in Azure SQL.
+7. Confirm product stock decreased exactly by the purchased quantity. Try ordering more than available stock to verify checkout rejects it.
+8. Check concurrent orders and rollback behavior before showing scaling claims.
+
+Run local tests (no database credentials needed): php tests/shop_helpers_test.php. GitHub Actions syntax-checks all PHP and runs helper tests on PRs; deployment only runs after a merge/push to main.
+
+## Example SQL verification
+
+    SELECT TOP 20 id, sku, name, price, stock FROM dbo.products ORDER BY id DESC;
+    SELECT TOP 20 id, customer_email, total, status, payment_status, created_at FROM dbo.orders ORDER BY id DESC;
+    SELECT TOP 20 order_id, sku, quantity, unit_price, line_total FROM dbo.order_items ORDER BY id DESC;
+
+## Architecture / scope
+
+Browser → Azure App Service (PHP) → Azure SQL (products, anonymous session carts, orders and line items). The order transaction performs stock checks in the database rather than trusting browser prices or cart quantities. Sessions are held by PHP and shopping-cart records use a hashed PHP session ID, not a customer account ID.
+
+**Not included yet:** multi-factor/OAuth login, registered-user carts, payment-method simulation, dynamic delivery tracking, auto-scaling/CDN/load-balancing proof, customer self-service order management, and GDPR compliance assessment. This PR covers the product catalogue, cart, checkout and stored-order development milestone only.
