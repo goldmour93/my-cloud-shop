@@ -47,51 +47,60 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $productId = (string) ($_POST['product_id'] ?? 'new');
     $sku = trim((string) ($_POST['sku'] ?? ''));
     $name = trim((string) ($_POST['name'] ?? ''));
+    $author = trim((string) ($_POST['author'] ?? ''));
+    $genre = (string) ($_POST['genre'] ?? '');
+    $bookFormat = (string) ($_POST['book_format'] ?? '');
     $description = trim((string) ($_POST['description'] ?? ''));
     $price = price_cents((string) ($_POST['price'] ?? ''));
     $stock = filter_var($_POST['stock'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
     $active = isset($_POST['is_active']) ? 1 : 0;
     if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}$/D', $sku)
         || $name === '' || strlen($name) > 120
+        || $author === '' || strlen($author) > 120
+        || !in_array($genre, ['Science Fiction', 'Fantasy'], true)
+        || !in_array($bookFormat, ['Paperback', 'Hardback'], true)
         || strlen($description) > 1000
         || $price === null || $stock === false) {
-        message('Check SKU (2–64 letters/numbers/-/_.), name, description, price and stock.');
+        message('Check SKU, title, author, genre, format, description, price and stock.');
         redirect_to('admin.php');
     }
 
     try {
         if ($productId === 'new') {
-            sql('INSERT INTO dbo.products (sku, name, description, price, stock, is_active)
-                 VALUES (?, ?, ?, ?, ?, ?)', [$sku, $name, $description, decimal($price), $stock, $active]);
+            sql('INSERT INTO dbo.products (sku, name, author, genre, book_format, description, price, stock, is_active)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 [$sku, $name, $author, $genre, $bookFormat, $description, decimal($price), $stock, $active]);
         } else {
             $id = filter_var($productId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
             if ($id === false) {
-                throw new DomainException('Invalid product identifier.');
+                throw new DomainException('Invalid book identifier.');
             }
-            $statement = sql('UPDATE dbo.products SET sku = ?, name = ?, description = ?, price = ?, stock = ?, is_active = ?, updated_at = SYSUTCDATETIME()
-                              WHERE id = ?', [$sku, $name, $description, decimal($price), $stock, $active, $id]);
+            $statement = sql('UPDATE dbo.products SET sku = ?, name = ?, author = ?, genre = ?, book_format = ?,
+                                  description = ?, price = ?, stock = ?, is_active = ?, updated_at = SYSUTCDATETIME()
+                              WHERE id = ?',
+                              [$sku, $name, $author, $genre, $bookFormat, $description, decimal($price), $stock, $active, $id]);
             $affected = sqlsrv_rows_affected($statement);
             sqlsrv_free_stmt($statement);
             if ($affected !== 1) {
-                throw new DomainException('Product not found.');
+                throw new DomainException('Book not found.');
             }
         }
-        message('Product saved.');
+        message('Book saved.');
     } catch (DomainException $e) {
         message($e->getMessage());
     } catch (Throwable $e) {
         error_log('MyShop admin product update: ' . $e->getMessage());
-        message('Could not save the product. Ensure the SKU is unique and Azure SQL is available.');
+        message('Could not save the book. Ensure the SKU is unique and Azure SQL is available.');
     }
     redirect_to('admin.php');
 }
 
 if (!$authenticated):
-    page_header('Product management');
+    page_header('Book inventory');
 ?>
 <div class="panel form-width">
     <h2>Administrator login</h2>
-    <p>Product creation, editing and stock changes are restricted to the shop administrator.</p>
+    <p>Book creation, editing and stock changes are restricted to the shop administrator.</p>
     <?php if (!getenv('ADMIN_PASSWORD_HASH')): ?>
     <p class="error">Admin access is not configured. Set ADMIN_PASSWORD_HASH in Azure App Service settings. See README.md.</p>
     <?php endif; ?>
@@ -108,36 +117,43 @@ if (!$authenticated):
     exit;
 endif;
 try {
-    $products = rows(sql('SELECT TOP (200) id, sku, name, description, price, stock, is_active FROM dbo.products ORDER BY id DESC'));
+    $products = rows(sql('SELECT TOP (200) id, sku, name, author, genre, book_format, description, price, stock, is_active FROM dbo.products ORDER BY id DESC'));
 } catch (Throwable $e) {
     unavailable($e);
 }
-page_header('Product management');
+page_header('Book inventory');
 ?>
 <form method="post" class="row">
     <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
     <input type="hidden" name="action" value="logout">
     <button class="secondary" type="submit">Sign out</button>
 </form>
-<h2>Add a product</h2>
+<h2>Add a book</h2>
 <section class="panel form-width">
 <form method="post">
     <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
     <input type="hidden" name="action" value="save_product">
     <input type="hidden" name="product_id" value="new">
-    <label for="new-sku">SKU (unique)</label><input id="new-sku" name="sku" required maxlength="64" placeholder="CLOUD-ITEM">
-    <label for="new-name">Name</label><input id="new-name" name="name" required maxlength="120">
-    <label for="new-description">Description</label><textarea id="new-description" name="description" maxlength="1000"></textarea>
+    <label for="new-sku">SKU (unique)</label><input id="new-sku" name="sku" required maxlength="64" placeholder="SF-BOOK-001">
+    <label for="new-name">Book title</label><input id="new-name" name="name" required maxlength="120">
+    <label for="new-author">Author</label><input id="new-author" name="author" required maxlength="120">
+    <div class="form-grid"><div><label for="new-genre">Genre</label><select id="new-genre" name="genre" required>
+      <option value="Science Fiction">Science fiction</option><option value="Fantasy">Fantasy</option>
+    </select></div>
+    <div><label for="new-format">Format</label><select id="new-format" name="book_format" required>
+      <option value="Paperback">Paperback</option><option value="Hardback">Hardback</option>
+    </select></div></div>
+    <label for="new-description">Book synopsis</label><textarea id="new-description" name="description" maxlength="1000"></textarea>
     <div class="form-grid">
         <div><label for="new-price">Price (GBP)</label><input id="new-price" name="price" type="text" inputmode="decimal" required placeholder="19.99"></div>
         <div><label for="new-stock">Stock quantity</label><input id="new-stock" name="stock" type="number" min="0" max="1000000" value="0" required></div>
     </div>
-    <label><input type="checkbox" name="is_active" value="1" checked> Available for sale</label>
-    <button type="submit">Create product</button>
+    <label><input type="checkbox" name="is_active" value="1" checked> Listed for sale</label>
+    <button type="submit">Add book</button>
 </form>
 </section>
-<h2>Edit products</h2>
-<p class="muted">Change stock, prices or details. Uncheck “Available for sale” to hide a product; orders keep their product snapshots. Up to 200 products are shown.</p>
+<h2>Edit books</h2>
+<p class="muted">Change stock, prices or details. Uncheck “Listed for sale” to hide a book; orders keep their product snapshots. Up to 200 books are shown.</p>
 <?php foreach ($products as $product): $id = (int) $product['id']; ?>
 <details class="panel product-admin">
     <summary><?= h($product['name']) ?> · <?= h($product['sku']) ?> · <?= (int) $product['stock'] ?> in stock<?= (bool) $product['is_active'] ? '' : ' · hidden' ?></summary>
@@ -147,15 +163,26 @@ page_header('Product management');
         <input type="hidden" name="product_id" value="<?= $id ?>">
         <label for="sku-<?= $id ?>">SKU (unique)</label>
         <input id="sku-<?= $id ?>" name="sku" maxlength="64" required value="<?= h($product['sku']) ?>">
-        <label for="name-<?= $id ?>">Name</label>
+        <label for="name-<?= $id ?>">Book title</label>
         <input id="name-<?= $id ?>" name="name" maxlength="120" required value="<?= h($product['name']) ?>">
-        <label for="description-<?= $id ?>">Description</label>
+        <label for="author-<?= $id ?>">Author</label>
+        <input id="author-<?= $id ?>" name="author" maxlength="120" required value="<?= h($product['author']) ?>">
+        <div class="form-grid"><div><label for="genre-<?= $id ?>">Genre</label>
+        <select id="genre-<?= $id ?>" name="genre">
+            <option value="Science Fiction" <?= $product['genre'] === 'Science Fiction' ? 'selected' : '' ?>>Science fiction</option>
+            <option value="Fantasy" <?= $product['genre'] === 'Fantasy' ? 'selected' : '' ?>>Fantasy</option>
+        </select></div>
+        <div><label for="format-<?= $id ?>">Format</label><select id="format-<?= $id ?>" name="book_format">
+            <option value="Paperback" <?= $product['book_format'] === 'Paperback' ? 'selected' : '' ?>>Paperback</option>
+            <option value="Hardback" <?= $product['book_format'] === 'Hardback' ? 'selected' : '' ?>>Hardback</option>
+        </select></div></div>
+        <label for="description-<?= $id ?>">Book synopsis</label>
         <textarea id="description-<?= $id ?>" name="description" maxlength="1000"><?= h($product['description']) ?></textarea>
         <div class="form-grid">
             <div><label for="price-<?= $id ?>">Price (GBP)</label><input id="price-<?= $id ?>" name="price" inputmode="decimal" required value="<?= h(decimal(price_cents((string) $product['price']) ?? 0)) ?>"></div>
             <div><label for="stock-<?= $id ?>">Stock</label><input id="stock-<?= $id ?>" type="number" name="stock" min="0" max="1000000" required value="<?= (int) $product['stock'] ?>"></div>
         </div>
-        <label><input type="checkbox" name="is_active" value="1" <?= (bool) $product['is_active'] ? 'checked' : '' ?>> Available for sale</label>
+        <label><input type="checkbox" name="is_active" value="1" <?= (bool) $product['is_active'] ? 'checked' : '' ?>> Listed for sale</label>
         <button type="submit">Save changes</button>
     </form>
 </details>

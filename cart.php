@@ -26,7 +26,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $current = $existing ? (int) $existing[0]['quantity'] : 0;
             $desired = $action === 'add' ? $current + $quantity : $quantity;
             if ($desired > (int) $products[0]['stock'] || $desired > 1000) {
-                throw new DomainException('Not enough stock available for that quantity.');
+                throw new DomainException('Not enough copies available for that quantity.');
             }
             if ($existing) {
                 sql('UPDATE dbo.cart_items SET quantity = ?, updated_at = SYSUTCDATETIME() WHERE session_key = ? AND product_id = ?', [$desired, cart_key(), $productId]);
@@ -50,11 +50,11 @@ try {
     unavailable($e);
 }
 $total = 0;
-page_header('Your shopping cart');
+page_header('Your book basket');
 ?>
 <?php if (!$items): ?>
-    <p>Your cart is empty.</p>
-    <p><a class="btn" href="catalog.php">Continue shopping</a></p>
+    <p>Your basket is empty.</p>
+    <p><a class="btn" href="catalog.php">Browse more books</a></p>
 <?php else: ?>
 <div class="table-wrap">
 <table>
@@ -66,7 +66,7 @@ page_header('Your shopping cart');
     $total += $subtotal;
 ?>
 <tr>
-    <td><strong><?= h($item['name']) ?></strong><br><span class="muted"><?= h($item['sku']) ?></span>
+    <td><strong><?= h($item['name']) ?></strong><br><span class="muted">by <?= h($item['author']) ?> · <?= h($item['book_format']) ?> · <?= h($item['sku']) ?></span>
     <?php if (!(bool) $item['is_active'] || (int) $item['quantity'] > (int) $item['stock']): ?>
         <p class="error">Unavailable or insufficient stock. Update or remove this item.</p>
     <?php endif; ?>
@@ -96,6 +96,6 @@ page_header('Your shopping cart');
 <?php endforeach; ?>
 </tbody></table></div>
 <p class="total">Total: <?= h(pounds($total)) ?></p>
-<p class="row"><a class="btn secondary" href="catalog.php">Continue shopping</a> <a class="btn" href="checkout.php">Proceed to checkout</a></p>
+<p class="row"><a class="btn secondary" href="catalog.php">Browse more books</a> <a class="btn" href="checkout.php">Checkout books</a></p>
 <?php endif; ?>
 <?php page_footer(); ?>

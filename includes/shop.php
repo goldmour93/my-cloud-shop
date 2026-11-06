@@ -75,7 +75,7 @@ function sql(string $statement, array $params = []): mixed
     if ($result === false) {
         $errors = function_exists('sqlsrv_errors') ? sqlsrv_errors(SQLSRV_ERR_ERRORS) : [];
         foreach (is_array($errors) ? $errors : [] as $error) {
-            error_log('MyShop SQL error code: ' . ($error['code'] ?? 'unknown'));
+            error_log('Starbound Books SQL error code: ' . ($error['code'] ?? 'unknown'));
         }
         throw new RuntimeException('Database operation failed.');
     }
@@ -95,7 +95,7 @@ function rows(mixed $statement): array
 function cart_lines(): array
 {
     return rows(sql(
-        'SELECT c.product_id, c.quantity, p.sku, p.name, p.price, p.stock, p.is_active
+        'SELECT c.product_id, c.quantity, p.sku, p.name, p.author, p.genre, p.book_format, p.price, p.stock, p.is_active
          FROM dbo.cart_items AS c
          INNER JOIN dbo.products AS p ON p.id = c.product_id
          WHERE c.session_key = ? ORDER BY p.name',
@@ -146,13 +146,13 @@ function page_header(string $title): void
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>$safeTitle · MyShop</title>
+<title>$safeTitle · Starbound Books</title>
 <link rel="stylesheet" href="assets/shop.css">
 </head>
 <body>
 <header class="site-header"><div class="wrap topbar">
-<a class="brand" href="index.php">MyShop</a>
-<nav aria-label="Main navigation"><a href="catalog.php">Shop</a><a href="cart.php">Cart</a><a href="orders.php">My orders</a><a href="admin.php">Manage products</a></nav>
+<a class="brand" href="index.php">Starbound Books</a>
+<nav aria-label="Main navigation"><a href="catalog.php">All books</a><a href="catalog.php?genre=Science+Fiction">Sci-fi</a><a href="catalog.php?genre=Fantasy">Fantasy</a><a href="cart.php">Basket</a><a href="orders.php">Orders</a><a href="admin.php">Book admin</a></nav>
 </div></header>
 <main class="wrap"><h1>$safeTitle</h1>
 HTML;
@@ -163,12 +163,12 @@ HTML;
 
 function page_footer(): void
 {
-    echo '</main><footer class="site-footer"><div class="wrap">MyShop · CloudCart workshop · Prices in GBP. No payments are collected.</div></footer></body></html>';
+    echo '</main><footer class="site-footer"><div class="wrap">Starbound Books · A CloudCart learning project · Demo inventory and prices · No real payments.</div></footer></body></html>';
 }
 
 function unavailable(Throwable $error): never
 {
-    error_log('MyShop shop error: ' . $error->getMessage());
+    error_log('Starbound Books shop error: ' . $error->getMessage());
     http_response_code(503);
     page_header('Shop temporarily unavailable');
     echo '<p>The shop database is not ready. Check the Azure SQL setup and try again.</p>';

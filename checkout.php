@@ -24,7 +24,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $transactionStarted = true;
         // Hold cart rows stable while calculating totals and purchasing stock.
         $items = rows(sql(
-            'SELECT c.product_id, c.quantity, p.sku, p.name, p.price, p.is_active
+            'SELECT c.product_id, c.quantity, p.sku, p.name, p.author, p.price, p.is_active
              FROM dbo.cart_items AS c WITH (UPDLOCK, HOLDLOCK)
              JOIN dbo.products AS p ON p.id = c.product_id
              WHERE c.session_key = ? ORDER BY c.product_id',
@@ -75,9 +75,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $unitCents = price_cents((string) $item['price']) ?? 0;
             $lineCents = $unitCents * (int) $item['quantity'];
             sql(
-                'INSERT INTO dbo.order_items (order_id, product_id, sku, name, quantity, unit_price, line_total)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [$orderId, (int) $item['product_id'], $item['sku'], $item['name'],
+                'INSERT INTO dbo.order_items (order_id, product_id, sku, name, author, quantity, unit_price, line_total)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [$orderId, (int) $item['product_id'], $item['sku'], $item['name'], $item['author'],
                  (int) $item['quantity'], decimal($unitCents), decimal($lineCents)]
             );
         }
@@ -122,7 +122,7 @@ page_header('Checkout');
 <div class="panel form-width">
     <h2>Review your order</h2>
     <?php foreach ($items as $item): ?>
-    <p><?= h($item['name']) ?> × <?= (int) $item['quantity'] ?> —
+    <p><strong><?= h($item['name']) ?></strong> <span class="muted">by <?= h($item['author']) ?></span> × <?= (int) $item['quantity'] ?> —
        <?= h(pounds((price_cents((string) $item['price']) ?? 0) * (int) $item['quantity'])) ?></p>
     <?php endforeach; ?>
     <p class="total">Total: <?= h(pounds($total)) ?></p>

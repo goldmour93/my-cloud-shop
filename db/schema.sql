@@ -48,12 +48,15 @@ BEGIN
         product_id INT NULL REFERENCES dbo.products(id),
         sku NVARCHAR(64) NOT NULL,
         name NVARCHAR(120) NOT NULL,
+        author NVARCHAR(120) NOT NULL,
         quantity INT NOT NULL CHECK (quantity > 0),
         unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
         line_total DECIMAL(10,2) NOT NULL CHECK (line_total >= 0)
     );
     CREATE INDEX IX_order_items_order ON dbo.order_items(order_id);
 END;
+IF COL_LENGTH('dbo.order_items', 'author') IS NULL
+    ALTER TABLE dbo.order_items ADD author NVARCHAR(120) NOT NULL CONSTRAINT DF_order_items_author DEFAULT N'Unknown Author' WITH VALUES;
 -- Seed sample catalogue. Existing products are not overwritten.
 IF NOT EXISTS (SELECT 1 FROM dbo.products WHERE sku = N'CLOUD-TEE')
     INSERT INTO dbo.products (sku, name, description, price, stock)

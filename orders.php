@@ -9,7 +9,7 @@ try {
     if ($showDetail) {
         $orders = rows(sql('SELECT id, public_token, customer_name, customer_email, shipping_address, total, status, payment_status, created_at FROM dbo.orders WHERE public_token = ?', [$requestedToken]));
         $order = $orders[0] ?? null;
-        $items = $order ? rows(sql('SELECT sku, name, quantity, unit_price, line_total FROM dbo.order_items WHERE order_id = ? ORDER BY id', [(int) $order['id']])) : [];
+        $items = $order ? rows(sql('SELECT sku, name, author, quantity, unit_price, line_total FROM dbo.order_items WHERE order_id = ? ORDER BY id', [(int) $order['id']])) : [];
     } elseif ($tokens) {
         $placeholders = implode(',', array_fill(0, count($tokens), '?'));
         $orders = rows(sql('SELECT id, public_token, total, status, payment_status, created_at FROM dbo.orders WHERE public_token IN (' . $placeholders . ') ORDER BY id DESC', $tokens));
@@ -39,7 +39,7 @@ page_header('My orders');
     <div class="table-wrap"><table>
     <thead><tr><th>Item</th><th>Qty</th><th>Unit price</th><th>Line total</th></tr></thead>
     <tbody><?php foreach ($items as $item): ?><tr>
-      <td><?= h($item['name']) ?> (<?= h($item['sku']) ?>)</td>
+      <td><?= h($item['name']) ?> — <?= h($item['author']) ?> (<?= h($item['sku']) ?>)</td>
       <td><?= (int) $item['quantity'] ?></td>
       <td><?= h(pounds(price_cents((string) $item['unit_price']) ?? 0)) ?></td>
       <td><?= h(pounds(price_cents((string) $item['line_total']) ?? 0)) ?></td>

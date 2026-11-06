@@ -1,17 +1,40 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/shop.php';
-page_header('Welcome to MyShop');
+page_header('Your next great escape');
 ?>
 <section class="hero">
-    <h2>Shop the CloudCart collection</h2>
-    <p>Browse products, build a cart and place a demonstration order with live stock checks.</p>
-    <a class="btn" href="catalog.php">Browse products</a>
-    <a class="btn secondary" href="register.php">Create an account</a>
+    <div class="hero-copy">
+        <p class="eyebrow">SCIENCE FICTION & FANTASY · INDEPENDENT DEMO BOOKSHOP</p>
+        <h2>Other worlds.<br>One bookshop.</h2>
+        <p>From distant galaxies to enchanted kingdoms, discover your next favourite story.</p>
+        <div class="hero-actions">
+            <a class="btn" href="catalog.php">Explore all books</a>
+            <a class="btn outline" href="catalog.php?genre=Science+Fiction">Shop sci-fi</a>
+            <a class="btn outline" href="catalog.php?genre=Fantasy">Shop fantasy</a>
+        </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="hero-book"><span>STARBOUND</span><strong>THE<br>STORIES<br>AWAIT</strong><small>✦ ✦ ✦</small></div>
+    </div>
 </section>
-<div class="grid">
-    <div class="card"><h2>Product catalogue</h2><p>Current products, prices and stock levels from Azure SQL.</p><a href="catalog.php">Open catalogue</a></div>
-    <div class="card"><h2>Your shopping cart</h2><p>Update quantities before checkout.</p><a href="cart.php">View cart</a></div>
-    <div class="card"><h2>Order tracking</h2><p>View orders you placed in this browser session.</p><a href="orders.php">My orders</a></div>
+<section class="section-heading"><div><p class="eyebrow">BROWSE BY UNIVERSE</p><h2>Find your genre</h2></div></section>
+<div class="genre-grid">
+    <a class="genre-tile space" href="catalog.php?genre=Science+Fiction">
+        <span class="genre-symbol" aria-hidden="true">✧</span>
+        <span class="genre-text"><strong>Science fiction</strong><small>Beyond the stars and into tomorrow</small></span>
+        <span aria-hidden="true">↗</span>
+    </a>
+    <a class="genre-tile magic" href="catalog.php?genre=Fantasy">
+        <span class="genre-symbol" aria-hidden="true">✦</span>
+        <span class="genre-text"><strong>Fantasy</strong><small>Myths, magic and forgotten realms</small></span>
+        <span aria-hidden="true">↗</span>
+    </a>
 </div>
+<section class="info-strip">
+    <div><strong>Curated worlds</strong><span>Browse a focused collection of speculative fiction.</span></div>
+    <div><strong>Stock you can see</strong><span>Availability comes from your Azure SQL catalogue.</span></div>
+    <div><strong>Practice checkout</strong><span>Place demo orders. No real payment is collected.</span></div>
+</section>
 <?php page_footer(); ?>
