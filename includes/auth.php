@@ -150,17 +150,18 @@ function totp_encrypt(string $secret): string
     if (!is_string($encrypted)) {
         throw new RuntimeException('Could not encrypt authenticator secret.');
     }
-    return $nonce . $tag . $encrypted;
+    return base64_encode($nonce . $tag . $encrypted);
 }
 
 function totp_decrypt(mixed $encrypted): ?string
 {
     $key = totp_encryption_key();
-    if ($key === null || !is_string($encrypted) || strlen($encrypted) < 29) {
+    $blob = is_string($encrypted) ? base64_decode($encrypted, true) : false;
+    if ($key === null || !is_string($blob) || strlen($blob) < 29) {
         return null;
     }
-    $secret = openssl_decrypt(substr($encrypted, 28), 'aes-256-gcm', $key,
-        OPENSSL_RAW_DATA, substr($encrypted, 0, 12), substr($encrypted, 12, 16));
+    $secret = openssl_decrypt(substr($blob, 28), 'aes-256-gcm', $key,
+        OPENSSL_RAW_DATA, substr($blob, 0, 12), substr($blob, 12, 16));
     return is_string($secret) ? $secret : null;
 }
 

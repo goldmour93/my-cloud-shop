@@ -25,6 +25,8 @@ jobs:
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run shop helper tests
         run: php tests/shop_helpers_test.php
+      - name: Test CloudCart customer auth, MFA, payments and status transitions
+        run: php tests/customer_features_test.php
       - name: Setup Python for Azure Functions tests
         uses: actions/setup-python@v5
         with:

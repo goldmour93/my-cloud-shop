@@ -137,6 +137,7 @@ page_header('Book inventory');
     <input type="hidden" name="action" value="logout">
     <button class="secondary" type="submit">Sign out</button>
 </form>
+<p><a class="btn secondary" href="admin_orders.php">Manage simulated deliveries and orders</a></p>
 <h2>Add a book</h2>
 <section class="panel form-width">
 <form method="post">

@@ -93,3 +93,17 @@ table{border-collapse:collapse;width:100%;background:#121d37}th,td{padding:.8rem
 .book-cover-image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#09142a;z-index:2}
 .edition-link{font-size:.76rem;color:#afc9f5;display:inline-block;margin:-.3rem 0 .7rem}
 .edition-link:hover{color:#e8d2a8}
+
+/* CloudCart account, wishlist and tracking UI */
+.wishlist-inline-form{margin-top:.65rem}
+.wishlist-inline-form button{width:100%}
+.wishlist-card{min-width:0}
+.wishlist-card h2{font-size:1.25rem}
+.wishlist-cover{height:190px;width:auto;max-width:95%;object-fit:contain;margin:auto;display:block}
+.timeline{list-style:none;padding-left:1.35rem;border-left:2px solid #c79a55}
+.timeline li{position:relative;padding:.4rem .4rem .8rem 1rem;margin:0 0 .6rem}
+.timeline li:before{content:"";position:absolute;left:-1.78rem;top:.65rem;width:9px;height:9px;background:#f0c583;border-radius:50%}
+.timeline small{display:block;color:#9baac3;margin-top:.2rem}
+.admin-status-form{display:grid;gap:.3rem;min-width:170px}
+.admin-status-form input{width:100%}
+.site-header nav{column-gap:.85rem;row-gap:.4rem}

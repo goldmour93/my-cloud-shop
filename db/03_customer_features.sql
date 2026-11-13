@@ -11,7 +11,7 @@ BEGIN
         email NVARCHAR(254) NOT NULL,
         password_hash NVARCHAR(255) NULL,
         google_subject NVARCHAR(150) NULL,
-        mfa_secret VARBINARY(512) NULL,
+        mfa_secret NVARCHAR(1024) NULL,
         mfa_enabled BIT NOT NULL CONSTRAINT DF_customer_mfa_enabled DEFAULT (0),
         mfa_last_counter BIGINT NULL,
         login_failures INT NOT NULL CONSTRAINT DF_customer_login_failures DEFAULT (0),
