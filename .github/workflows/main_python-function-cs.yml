@@ -1,6 +1,6 @@
 # Browser-only Azure Function deployment, using GitHub Actions and OIDC.
 # Azure Portal > python-function-cs > Deployment Center can set up the identity.
-name: Deploy Starbound Python Function
+name: Deploy Starbound Python Function (Azure Portal)
 
 on:
   workflow_dispatch:
