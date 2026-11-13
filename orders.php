@@ -40,11 +40,11 @@ page_header('My orders and delivery tracking');
   <?php if (!$order): ?>
     <p>Order not found for this account.</p>
   <?php else: ?>
-    <section class="panel">
+    <section class="panel" id="order-tracking" data-order-token="<?= h($requestedToken) ?>">
       <h2>Order #<?= (int)$order['id'] ?></h2>
       <p>Recipient: <?= h($order['customer_name']) ?></p>
       <p>Fictional delivery address: <?= nl2br(h($order['shipping_address'])) ?></p>
-      <p>Status: <strong><?= h(ucfirst((string)$order['status'])) ?></strong>
+      <p>Status: <strong id="order-status-live"><?= h(ucfirst((string)$order['status'])) ?></strong>
          · Payment: <strong><?= h((string)$order['payment_status']) ?></strong>
          · Method: <?= h(demo_payment_label((string)($order['payment_method'] ?? ''))) ?></p>
       <p class="total">Total: <?= h(pounds(price_cents((string)$order['total']) ?? 0)) ?></p>
@@ -58,8 +58,9 @@ page_header('My orders and delivery tracking');
         <?php endforeach; ?></tbody>
       </table></div>
       <h3>Order tracking timeline</h3>
+      <p id="tracking-last-checked" class="muted">Checking for tracking updates…</p>
       <?php if (!$events): ?><p>Legacy order: initial status only.</p>
-      <?php else: ?><ol class="timeline">
+      <?php else: ?><ol id="tracking-list" class="timeline">
         <?php foreach ($events as $event): ?>
           <li><strong><?= h(ucfirst((string)$event['status'])) ?></strong>
             — <?= h((string)$event['note']) ?>
@@ -88,4 +89,7 @@ page_header('My orders and delivery tracking');
   <?php endif; ?>
 <?php endif; ?>
 <p><a href="orders.php">Back to my orders</a></p>
+<?php if ($requestedToken !== '' && !empty($order)): ?>
+  <script defer src="assets/order_tracking.js"></script>
+<?php endif; ?>
 <?php page_footer(); ?>

@@ -143,7 +143,7 @@ https://firstwebpage-cs-gbgsh8dzdjg4d0aw.italynorth-01.azurewebsites.net/
   Authenticator TOTP secrets AES-256-GCM encrypted at rest with an Azure
   environment key; accepted codes cannot be replayed once used.
   Google OAuth/OpenID Connect optional, with cryptographic token checks.
-- **Authorization:** Order access by `customer_id`, wishlist by
+- **Authorization:** Account-protected read-only `api/order_status.php` provides pollable JSON updates (every 15 seconds) without exposing another reader's order. Order access by `customer_id`, wishlist by
   `customer_id`, order status changes by existing separate book admin.
 - **Payments:** `demo_card`, `demo_wallet`, `demo_bank` plus explicit
   approved/declined test scenarios. Neither collects card numbers nor
