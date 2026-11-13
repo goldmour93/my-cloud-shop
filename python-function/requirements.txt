@@ -1,1 +1,5 @@
-azure-functions==1.26.0
+# Python 3.11/3.12 (local workshop / stable Azure runtimes).
+azure-functions==1.26.0; python_version < "3.13"
+
+# Python 3.13+ (including 3.15 Preview selected in python-function-cs).
+azure-functions==2.4.0; python_version >= "3.13"
