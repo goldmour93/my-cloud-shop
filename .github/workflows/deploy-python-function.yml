@@ -1,0 +1,57 @@
+# Browser-only Azure Function deployment, using GitHub Actions and OIDC.
+# Azure Portal > python-function-cs > Deployment Center can set up the identity.
+name: Deploy Starbound Python Function
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-python-function:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python for tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify Python source and unit tests
+        run: |
+          python -m compileall -q python-function
+          python -m unittest discover -s python-function/tests -v
+
+      - name: Sign in to Azure using GitHub OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # For Flex Consumption set GitHub Actions variable:
+      # AZURE_FUNCTIONS_PLAN=flexconsumption
+      - name: Publish to Flex Consumption
+        if: vars.AZURE_FUNCTIONS_PLAN == 'flexconsumption'
+        uses: Azure/functions-action@v1
+        with:
+          app-name: python-function-cs
+          package: python-function
+          remote-build: true
+          respect-funcignore: true
+
+      - name: Publish to Consumption, Premium or Dedicated
+        if: vars.AZURE_FUNCTIONS_PLAN != 'flexconsumption'
+        uses: Azure/functions-action@v1
+        with:
+          app-name: python-function-cs
+          package: python-function
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+          respect-funcignore: true
