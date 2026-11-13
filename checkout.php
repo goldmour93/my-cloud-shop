@@ -1,16 +1,17 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/includes/shop.php';
+require_once __DIR__ . '/includes/auth.php';
+$user = require_customer();
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     require_post_csrf();
     $name = trim((string) ($_POST['customer_name'] ?? ''));
-    $email = trim((string) ($_POST['customer_email'] ?? ''));
     $address = trim((string) ($_POST['shipping_address'] ?? ''));
-    if ($name === '' || strlen($name) > 120
-        || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254
-        || $address === '' || strlen($address) > 500) {
-        message('Enter a name, valid email and shipping address (within the field limits).');
+    $method = (string) ($_POST['payment_method'] ?? '');
+    $outcome = (string) ($_POST['demo_outcome'] ?? '');
+    if ($name === '' || strlen($name) > 120 || $address === '' || strlen($address) > 500
+        || !validate_demo_payment($method, $outcome)) {
+        message('Complete your fictional delivery details and choose a valid simulated payment method/outcome.');
         redirect_to('checkout.php');
     }
 
@@ -22,121 +23,128 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             throw new RuntimeException('Could not start checkout transaction.');
         }
         $transactionStarted = true;
-        // Hold cart rows stable while calculating totals and purchasing stock.
         $items = rows(sql(
             'SELECT c.product_id, c.quantity, p.sku, p.name, p.author, p.price, p.is_active
-             FROM dbo.cart_items AS c WITH (UPDLOCK, HOLDLOCK)
-             JOIN dbo.products AS p ON p.id = c.product_id
+             FROM dbo.cart_items c WITH (UPDLOCK, HOLDLOCK)
+             JOIN dbo.products p ON p.id = c.product_id
              WHERE c.session_key = ? ORDER BY c.product_id',
             [cart_key()]
         ));
-        if (!$items) {
-            throw new DomainException('Your cart is empty.');
-        }
+        if (!$items) throw new DomainException('Your basket is empty.');
         $totalCents = 0;
         foreach ($items as $item) {
             if (!(bool) $item['is_active'] || (int) $item['quantity'] < 1) {
-                throw new DomainException('A product in your cart is no longer available.');
+                throw new DomainException('A basket item is no longer available.');
             }
-            $unitCents = price_cents((string) $item['price']);
-            if ($unitCents === null) {
-                throw new RuntimeException('Invalid stored product price.');
-            }
-            $totalCents += $unitCents * (int) $item['quantity'];
-            if ($totalCents > 9999999999) {
-                throw new DomainException('Order total exceeds the checkout limit.');
-            }
-        }
-        // Atomic conditional stock decrements prevent overselling under concurrent orders.
-        foreach ($items as $item) {
-            $stmt = sql(
-                'UPDATE dbo.products SET stock = stock - ?, updated_at = SYSUTCDATETIME()
-                 WHERE id = ? AND is_active = 1 AND stock >= ?',
-                [(int) $item['quantity'], (int) $item['product_id'], (int) $item['quantity']]
-            );
-            $affected = sqlsrv_rows_affected($stmt);
-            sqlsrv_free_stmt($stmt);
-            if ($affected !== 1) {
-                throw new DomainException('Stock changed while checking out. Please review your cart.');
-            }
+            $price = price_cents((string) $item['price']);
+            if ($price === null) throw new RuntimeException('Invalid product price.');
+            $totalCents += $price * (int) $item['quantity'];
+            if ($totalCents > 9999999999) throw new DomainException('Basket exceeds checkout limit.');
         }
 
-        $token = bin2hex(random_bytes(16));
-        $inserted = rows(sql(
-            'INSERT INTO dbo.orders (public_token, customer_name, customer_email, shipping_address, total, status, payment_status)
-             OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [$token, $name, $email, $address, decimal($totalCents), 'placed', 'not_collected']
-        ));
-        if (!$inserted) {
-            throw new RuntimeException('Order insert returned no identifier.');
+        // The simulated processor is deterministic. No card numbers, real API
+        // calls, bank credentials or real payment authorisations are collected.
+        if ($outcome === 'declined') {
+            sql('INSERT INTO dbo.payment_attempts(customer_id, order_id, method, outcome, amount)
+                 VALUES(?, NULL, ?, ?, ?)',
+                 [(int) $user['id'], $method, 'declined', decimal($totalCents)]);
+            if (!sqlsrv_commit($connection)) throw new RuntimeException('Could not record declined simulation.');
+            $transactionStarted = false;
+            message('Simulated payment declined. No order was placed; no stock was changed. Try approval to complete a demo order.');
+            redirect_to('checkout.php');
         }
-        $orderId = (int) $inserted[0]['id'];
+
+        // Stock changes and order inserts are one SQL transaction.
         foreach ($items as $item) {
-            $unitCents = price_cents((string) $item['price']) ?? 0;
-            $lineCents = $unitCents * (int) $item['quantity'];
-            sql(
-                'INSERT INTO dbo.order_items (order_id, product_id, sku, name, author, quantity, unit_price, line_total)
+            $stmt = sql('UPDATE dbo.products SET stock = stock - ?, updated_at=SYSUTCDATETIME()
+                         WHERE id = ? AND is_active=1 AND stock >= ?',
+                        [(int)$item['quantity'], (int)$item['product_id'], (int)$item['quantity']]);
+            $affected = sqlsrv_rows_affected($stmt);
+            sqlsrv_free_stmt($stmt);
+            if ($affected !== 1) throw new DomainException('Stock changed during checkout. Please review your basket.');
+        }
+        $token = bin2hex(random_bytes(16));
+        $new = rows(sql(
+            'INSERT INTO dbo.orders
+             (public_token, customer_id, customer_name, customer_email,
+              shipping_address, total, status, payment_status, payment_method)
+             OUTPUT INSERTED.id
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$token, (int) $user['id'], $name, (string) $user['email'],
+             $address, decimal($totalCents), 'placed', 'simulated_paid', $method]
+        ));
+        if (!$new) throw new RuntimeException('Order could not be created.');
+        $orderId = (int) $new[0]['id'];
+        foreach ($items as $item) {
+            $unit = price_cents((string) $item['price']) ?? 0;
+            sql('INSERT INTO dbo.order_items
+                 (order_id, product_id, sku, name, author, quantity, unit_price, line_total)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [$orderId, (int) $item['product_id'], $item['sku'], $item['name'], $item['author'],
-                 (int) $item['quantity'], decimal($unitCents), decimal($lineCents)]
-            );
+                [$orderId, (int) $item['product_id'], (string)$item['sku'],
+                 (string)$item['name'], (string)$item['author'], (int)$item['quantity'],
+                 decimal($unit), decimal($unit * (int)$item['quantity'])]);
         }
-        sql('DELETE FROM dbo.cart_items WHERE session_key = ?', [cart_key()]);
-        if (!sqlsrv_commit($connection)) {
-            throw new RuntimeException('Could not commit checkout.');
-        }
+        sql('INSERT INTO dbo.payment_attempts(customer_id,order_id,method,outcome,amount)
+             VALUES(?,?,?,?,?)',
+             [(int) $user['id'],$orderId,$method,'approved',decimal($totalCents)]);
+        sql('INSERT INTO dbo.order_status_events(order_id,status,note) VALUES(?,?,?)',
+             [$orderId, 'placed', 'Demonstration order created and virtual payment approved']);
+        sql('DELETE FROM dbo.cart_items WHERE session_key=?', [cart_key()]);
+        if (!sqlsrv_commit($connection)) throw new RuntimeException('Could not complete checkout.');
         $transactionStarted = false;
-        $_SESSION['order_tokens'] = array_slice(
-            array_merge((array) ($_SESSION['order_tokens'] ?? []), [$token]),
-            -20
-        );
-        redirect_to('orders.php?order=' . urlencode($token));
+        message('Demonstration order placed. Payment simulated as approved; no money was taken.');
+        redirect_to('orders.php?order=' . rawurlencode($token));
     } catch (Throwable $e) {
-        if ($transactionStarted && $connection !== null) {
-            sqlsrv_rollback($connection);
-        }
-        if ($e instanceof DomainException) {
-            message($e->getMessage());
-        } else {
-            error_log('MyShop checkout: ' . $e->getMessage());
-            message('Checkout could not be completed. No order was placed. Please try again.');
+        if ($transactionStarted && $connection !== null) sqlsrv_rollback($connection);
+        if ($e instanceof DomainException) message($e->getMessage());
+        else {
+            error_log('Simulated checkout error: ' . $e->getMessage());
+            message('Checkout could not complete. No order was placed; please try again.');
         }
         redirect_to('cart.php');
     }
 }
-
 try {
     $items = cart_lines();
 } catch (Throwable $e) {
     unavailable($e);
 }
 $total = 0;
-foreach ($items as $item) {
-    $total += (price_cents((string) $item['price']) ?? 0) * (int) $item['quantity'];
-}
-page_header('Checkout');
+foreach ($items as $item) $total += (price_cents((string) $item['price']) ?? 0) * (int) $item['quantity'];
+page_header('Simulated checkout');
 ?>
 <?php if (!$items): ?>
-<p>Your cart is empty. <a href="catalog.php">Browse products</a>.</p>
+  <p>Your basket is empty. <a href="catalog.php">Browse books</a>.</p>
 <?php else: ?>
-<div class="panel form-width">
-    <h2>Review your order</h2>
-    <?php foreach ($items as $item): ?>
-    <p><strong><?= h($item['name']) ?></strong> <span class="muted">by <?= h($item['author']) ?></span> × <?= (int) $item['quantity'] ?> —
-       <?= h(pounds((price_cents((string) $item['price']) ?? 0) * (int) $item['quantity'])) ?></p>
-    <?php endforeach; ?>
-    <p class="total">Total: <?= h(pounds($total)) ?></p>
-    <p class="notice">Demo checkout only. No payment is taken or recorded as paid.</p>
-    <form method="post">
-        <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
-        <label for="customer_name">Full name</label>
-        <input id="customer_name" name="customer_name" maxlength="120" autocomplete="name" required>
-        <label for="customer_email">Email</label>
-        <input id="customer_email" name="customer_email" type="email" maxlength="254" autocomplete="email" required>
-        <label for="shipping_address">Shipping address</label>
-        <textarea id="shipping_address" name="shipping_address" rows="4" maxlength="500" autocomplete="street-address" required></textarea>
-        <button type="submit">Place demonstration order</button>
-    </form>
-</div>
+<section class="panel form-width">
+  <h2>Review your order</h2>
+  <?php foreach ($items as $item): ?>
+    <p><strong><?= h($item['name']) ?></strong> × <?= (int)$item['quantity'] ?>
+       — <?= h(pounds((price_cents((string)$item['price']) ?? 0) * (int)$item['quantity'])) ?></p>
+  <?php endforeach; ?>
+  <p class="total">Total: <?= h(pounds($total)) ?></p>
+  <p class="notice"><strong>Coursework simulation only.</strong> No real card data, real payments, bank transfers or deliveries.
+    Please enter fictional shipping information.</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
+    <label for="customer_name">Fictional recipient name</label>
+    <input id="customer_name" name="customer_name" required maxlength="120" value="<?= h($user['name']) ?>">
+    <p>Receipt account: <strong><?= h($user['email']) ?></strong></p>
+    <label for="shipping_address">Fictional shipping address</label>
+    <textarea id="shipping_address" name="shipping_address" rows="3" maxlength="500" required placeholder="123 Demo Street, Test City"></textarea>
+    <label for="payment_method">Virtual payment method</label>
+    <select id="payment_method" name="payment_method" required>
+      <option value="demo_card">Simulated card</option>
+      <option value="demo_wallet">Simulated digital wallet</option>
+      <option value="demo_bank">Simulated bank transfer</option>
+    </select>
+    <label for="demo_outcome">Simulation outcome</label>
+    <select id="demo_outcome" name="demo_outcome" required>
+      <option value="approved">Approve virtual payment and place order</option>
+      <option value="declined">Decline virtual payment (no order; stock unchanged)</option>
+    </select>
+    <button type="submit">Run virtual payment &amp; checkout</button>
+  </form>
+</section>
 <?php endif; ?>
 <?php page_footer(); ?>
