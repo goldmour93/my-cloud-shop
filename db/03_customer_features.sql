@@ -35,7 +35,14 @@ BEGIN
 END;
 
 IF COL_LENGTH(N'dbo.orders', N'customer_id') IS NULL
-    ALTER TABLE dbo.orders ADD customer_id INT NULL REFERENCES dbo.customer_accounts(id);
+    ALTER TABLE dbo.orders ADD customer_id INT NULL;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE parent_object_id=OBJECT_ID(N'dbo.orders') AND name=N'FK_orders_customer'
+)
+    ALTER TABLE dbo.orders WITH CHECK ADD CONSTRAINT FK_orders_customer
+        FOREIGN KEY (customer_id) REFERENCES dbo.customer_accounts(id);
 
 IF COL_LENGTH(N'dbo.orders', N'payment_method') IS NULL
     ALTER TABLE dbo.orders ADD payment_method NVARCHAR(30) NULL;

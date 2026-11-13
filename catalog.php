@@ -34,6 +34,7 @@ try {
 } catch (Throwable $e) {
     unavailable($e);
 }
+$signedIn = customer() !== null;
 page_header('Explore the shelves');
 ?>
 <p class="intro">Famous science-fiction and fantasy books by authors including Brandon Sanderson, Frank Herbert and Andy Weir. Titles are real; prices, availability and checkout are simulated for coursework.</p>
@@ -93,7 +94,7 @@ page_header('Explore the shelves');
             <button type="submit">Add to basket</button>
         </form>
         <?php else: ?><p class="muted">Currently unavailable.</p><?php endif; ?>
-        <?php if (customer() !== null): ?>
+        <?php if ($signedIn): ?>
         <form method="post" action="wishlist.php" class="wishlist-inline-form">
             <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
             <input type="hidden" name="action" value="save">

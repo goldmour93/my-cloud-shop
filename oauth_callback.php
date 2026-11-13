@@ -62,7 +62,7 @@ try {
     }
     $id = (int) $linked['id'];
     if ((bool) $linked['mfa_enabled']) {
-        session_regenerate_id(true);
+        // Only regenerate session once the second factor is verified.
         $_SESSION['pending_customer_id'] = $id;
         $_SESSION['pending_customer_at'] = time();
         $_SESSION['mfa_failures'] = 0;

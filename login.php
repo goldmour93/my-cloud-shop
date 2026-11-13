@@ -40,7 +40,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             }
             message('Invalid login details or account temporarily locked.');
         } elseif ((bool) $user['mfa_enabled']) {
-            session_regenerate_id(true);
+            // No authenticated privilege is granted until MFA succeeds.
+            // Keep the cart under this session ID until final login regeneration.
             $_SESSION['pending_customer_id'] = (int) $user['id'];
             $_SESSION['pending_customer_at'] = time();
             $_SESSION['mfa_failures'] = 0;
