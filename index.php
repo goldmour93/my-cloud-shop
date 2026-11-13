@@ -32,6 +32,27 @@ page_header('Your next great escape');
         <span aria-hidden="true">↗</span>
     </a>
 </div>
+<section class="recommendation-section" aria-labelledby="recommendations-title">
+    <div class="recommendation-header">
+        <div>
+            <p class="eyebrow">AN AZURE FUNCTIONS FEATURE</p>
+            <h2 id="recommendations-title">Recommended for you</h2>
+            <p>Live book suggestions from our Python serverless API.</p>
+        </div>
+        <div class="recommendation-choice">
+            <label for="recommendation-genre">Pick a genre</label>
+            <select id="recommendation-genre">
+                <option value="Fantasy">Fantasy</option>
+                <option value="Science Fiction">Science fiction</option>
+            </select>
+        </div>
+    </div>
+    <p id="recommendation-status" class="recommendation-status" role="status" aria-live="polite">
+        Loading book recommendations…
+    </p>
+    <div id="recommendation-results" class="recommendation-grid" aria-label="Recommended books"></div>
+</section>
+<script defer src="assets/recommendations.js"></script>
 <section class="info-strip">
     <div><strong>Curated worlds</strong><span>Discover real novels with demo prices and simulated stock.</span></div>
     <div><strong>Stock you can see</strong><span>Availability comes from your Azure SQL catalogue.</span></div>
