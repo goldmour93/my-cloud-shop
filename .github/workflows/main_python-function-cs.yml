@@ -28,6 +28,22 @@ jobs:
           python -m compileall -q python-function
           python -m unittest discover -s python-function/tests -v
 
+      # Flex Consumption is configured with Python 3.15 in Azure.
+      # Test dependencies with that same version before using Azure credits.
+      - name: Set up Python 3.15 (matches Azure Flex runtime)
+        if: vars.AZURE_FUNCTIONS_PLAN == 'flexconsumption'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+
+      - name: Verify Python 3.15 dependencies and discover Function routes
+        if: vars.AZURE_FUNCTIONS_PLAN == 'flexconsumption'
+        run: |
+          python --version
+          python -m pip install --disable-pip-version-check -r python-function/requirements.txt
+          python -m unittest discover -s python-function/tests -v
+          PYTHONPATH=python-function python -c "from function_app import app; assert app is not None; print('Python 3.15 Azure Functions app imports successfully')"
+
       - name: Sign in to Azure using GitHub OIDC
         uses: azure/login@v3
         with:
