@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/includes/shop.php';
+require_once __DIR__ . '/includes/auth.php';
 
 $search = trim((string) ($_GET['q'] ?? ''));
 $search = substr($search, 0, 100);
@@ -34,6 +34,7 @@ try {
 } catch (Throwable $e) {
     unavailable($e);
 }
+$signedIn = customer() !== null;
 page_header('Explore the shelves');
 ?>
 <p class="intro">Famous science-fiction and fantasy books by authors including Brandon Sanderson, Frank Herbert and Andy Weir. Titles are real; prices, availability and checkout are simulated for coursework.</p>
@@ -93,6 +94,17 @@ page_header('Explore the shelves');
             <button type="submit">Add to basket</button>
         </form>
         <?php else: ?><p class="muted">Currently unavailable.</p><?php endif; ?>
+        <?php if ($signedIn): ?>
+        <form method="post" action="wishlist.php" class="wishlist-inline-form">
+            <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
+            <input type="hidden" name="action" value="save">
+            <input type="hidden" name="product_id" value="<?= $id ?>">
+            <input type="hidden" name="return_to" value="catalog.php">
+            <button type="submit" class="secondary">♡ Save to wishlist</button>
+        </form>
+        <?php else: ?>
+            <p><a href="login.php">Sign in to save favourites</a></p>
+        <?php endif; ?>
     </div>
 </article>
 <?php endforeach; ?>

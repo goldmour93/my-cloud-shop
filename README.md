@@ -2,6 +2,38 @@
 
 PHP and Azure SQL bookstore deployed to **Azure App Service** using GitHub Actions. This is a **university coursework demonstration, not a real retailer**. The eight book titles, authors and ISBNs refer to **real published editions**; GBP prices, quantities, availability and checkout are **fictional simulations**. **No payment is collected.**
 
+## NEW: Customer login, MFA, Google OAuth, wishlist, virtual payments and order tracking
+
+**Mandatory Azure SQL migration BEFORE merging/deploying this feature:**
+[db/03_customer_features.sql](db/03_customer_features.sql). Run in
+Azure SQL `callumitaly` Query editor as a separate query (safe to re-run).
+For previously registered demo readers from `shopusers`, optionally run
+[db/04_import_legacy_readers_optional.sql](db/04_import_legacy_readers_optional.sql)
+after the migration.
+
+**Complete setup, Azure environment settings, Google OAuth client
+configuration, tests, and GDPR limitations:**
+[docs/CUSTOMER_FEATURES_SETUP.md](docs/CUSTOMER_FEATURES_SETUP.md).
+
+New customer URLs: `/register.php`, `/login.php`, `/account.php`,
+`/mfa_verify.php`, `/wishlist.php`, `/orders.php`, and `/checkout.php`.
+The existing `/admin.php` remains a separate administrator sign-in; new
+`/admin_orders.php` provides administrator-only simulated delivery updates.
+
+**Virtual payments never handle real cards or money.** Three mock methods
+(card, wallet, bank transfer) and explicit approved/declined outcomes are
+available, with attempts recorded in Azure SQL. Approved new orders are
+linked to customer accounts and include a status timeline. Old guest-session
+orders remain preserved but are not automatically attached to accounts.
+
+**OAuth is implemented but NOT live-enabled until you register a Google
+OAuth web app, verify its redirect URI, and set Google client credentials
+on the PHP App Service. Authenticator MFA likewise needs an Azure-only
+`MFA_ENCRYPTION_KEY`.** Do not claim these are verified live features
+without testing them.
+
+---
+
 ## The 8 real books shown in the catalogue
 
 | Genre | Book | Author | ISBN-13 (used as the product SKU) | Format |
@@ -51,9 +83,9 @@ Expected result: **eight active ISBN listings**, four science fiction and four f
 - Password-protected book administrator: edit/add books, covers (trusted Open Library URLs only), prices, descriptions and stock
 - Azure SQL shopping basket with quantity validation
 - Transactional order checkout with conditional stock decrements and order-item snapshots
-- Session-scoped demonstration order history
+- Account-linked order history and admin-driven delivery tracking for new checkout orders; legacy guest orders preserved in SQL
 - Read-only JSON API at `/api/books.php`; includes a validated `cover_url` per book for a later Python Azure Functions integration
-- Existing reader-registration exercise remains separate from customer login
+- Customer signup and login with hashed passwords, optional encrypted TOTP MFA and Google OAuth/OIDC provider support
 
 ### Test URLs
 
@@ -62,7 +94,7 @@ Expected result: **eight active ISBN listings**, four science fiction and four f
 - `/catalog.php?genre=Science+Fiction` — four science-fiction titles
 - `/catalog.php?genre=Fantasy` — four fantasy titles
 - `/cart.php` — demo basket
-- `/checkout.php` — **simulated checkout; no payment**
+- `/checkout.php` — **three virtual payment methods and approved/declined scenarios; no real payments**
 - `/orders.php` — session-scoped orders
 - `/admin.php` — admin inventory control
 - `/api/books.php` — read-only JSON suitable for a later Python Azure Function
@@ -98,9 +130,9 @@ A previous public commit reportedly exposed an Azure SQL credential. **Rotate/re
 5. Verify that ordering more books than exist cannot oversell stock.
 6. Configure a strong admin password hash and edit a book's price/stock, then confirm changes appear on the site.
 7. Call `/api/books.php` and confirm JSON contains only published active products, no credentials or customer data.
-8. Only after this works, connect your separate `SimpleHello` Python Azure Function as a **read-only HTTP client** to the PHP books API.
+8. Test the existing Python Azure Function read-only recommendations API; then run the additional customer-feature checks in `docs/CUSTOMER_FEATURES_SETUP.md`.
 
-**Limitations:** No real payment processing, OAuth/MFA or persistent customer account login; order history currently lives in the browser session. Simulated availability is not real retailer inventory. These features need further work and testing before a real e-commerce launch.
+**Limitations:** No real payments, fulfilment provider or real retailer inventory. Google OAuth needs external provider credentials before it works. MFA requires a separate Azure encryption key and lacks recovery-code self-service. Legacy guest orders are not automatically linked to accounts. Verification, GDPR rights workflows, production identity assurance and scale-out sessions still require more work before a real e-commerce launch.
 
 ## Code checks
 

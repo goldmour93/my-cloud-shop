@@ -165,7 +165,7 @@ function page_header(string $title): void
 <body>
 <header class="site-header"><div class="wrap topbar">
 <a class="brand" href="index.php">Starbound Books</a>
-<nav aria-label="Main navigation"><a href="catalog.php">All books</a><a href="catalog.php?genre=Science+Fiction">Sci-fi</a><a href="catalog.php?genre=Fantasy">Fantasy</a><a href="cart.php">Basket</a><a href="orders.php">Orders</a><a href="admin.php">Book admin</a></nav>
+<nav aria-label="Main navigation"><a href="catalog.php">All books</a><a href="catalog.php?genre=Science+Fiction">Sci-fi</a><a href="catalog.php?genre=Fantasy">Fantasy</a><a href="cart.php">Basket</a><a href="wishlist.php">Wishlist</a><a href="orders.php">Orders</a><a href="login.php">Sign in</a><a href="account.php">My account</a><a href="admin.php">Book admin</a></nav>
 </div></header>
 <main class="wrap"><h1>$safeTitle</h1>
 HTML;
@@ -176,7 +176,7 @@ HTML;
 
 function page_footer(): void
 {
-    echo '</main><footer class="site-footer"><div class="wrap">Starbound Books · CloudCart coursework demo · Prices/stock simulated · Covers via Open Library · No real payments.</div></footer></body></html>';
+    echo '</main><footer class="site-footer"><div class="wrap">Starbound Books · CloudCart coursework demo · Prices/stock simulated · Covers via Open Library · Virtual payments & deliveries only · No real money.</div></footer></body></html>';
 }
 
 function unavailable(Throwable $error): never
